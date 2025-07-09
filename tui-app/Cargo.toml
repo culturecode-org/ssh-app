@@ -1,0 +1,11 @@
+[package]
+name = "tui-app"
+version = "0.1.0"
+description = "Tui app to display in the ssh server"
+license = "MIT"
+edition = "2024"
+
+[dependencies]
+crossterm = "0.29.0"
+ratatui = "0.29.0"
+color-eyre = "0.6.3"

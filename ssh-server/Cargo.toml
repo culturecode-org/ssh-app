@@ -1,0 +1,12 @@
+[package]
+name = "ssh-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+env_logger = "0.6"
+log = "0.4.11"
+rand_core = { version = "0.6.4", features = ["getrandom", "std"] }
+russh = "0.52.1"
+tokio = "1.45.1"
+tui-app = { path = "../tui-app" }
