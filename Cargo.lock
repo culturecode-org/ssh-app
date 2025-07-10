@@ -1973,9 +1973,11 @@ dependencies = [
 name = "ssh-server"
 version = "0.1.0"
 dependencies = [
+ "crossterm 0.29.0",
  "env_logger",
  "log",
  "rand_core",
+ "ratatui",
  "russh",
  "tokio",
  "tui-app",

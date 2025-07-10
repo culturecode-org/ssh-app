@@ -44,7 +44,7 @@ impl AuthLog {
         }
     }
 
-    pub async fn all_entries(&self) -> Vec<String> {
+    pub async fn _all_entries(&self) -> Vec<String> {
         let entries = self.entries.lock().await;
         entries.iter().cloned().collect()
     }

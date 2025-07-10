@@ -8,7 +8,7 @@ use russh::{
     Error as SshError,
 };
 
-use crate::ssh::auth::AuthLog;
+use crate::ssh::{auth::AuthLog, terminal::TerminalHandle};
 use crate::ssh::app::App;
 
 #[derive(Clone, Debug)]
@@ -63,8 +63,8 @@ impl server::Handler for SshServer {
         let comment = key.comment();
 
         log::info!(
-            "Authentication attempt | user: {username}, key_type: {allowed_key_type}, comment: \"{comment}\""
-        );
+        "Authentication attempt | user: {username}, key_type: {allowed_key_type}, comment: \"{comment}\""
+    );
 
         self.protocol = Some(username.to_string());
         self.auth_log.record_key(username, key).await;
@@ -79,16 +79,19 @@ impl server::Handler for SshServer {
     ) -> Result<bool, Self::Error> {
         let channel_id = channel.id();
         let handle = session.handle();
-        let app = App::start();
+        let prot = self.protocol.as_deref();
 
-        {
-            let mut clients = self.clients.lock().await;
-            clients.insert(self.id, (channel_id, handle.clone(), app));
-        }
+        log::info!("Channel open session: {:?}", prot);
+        let app = if prot == Some("tui") {
+            let terminal_handle = TerminalHandle::start(handle.clone(), channel_id).await;
+            let mut app = App::start_tui(terminal_handle);
+            app.serve(None); // ?Initial Render
+            app
+        } else {
+            App::start()
+        };
 
-        let all_entries = self.auth_log.all_entries().await;
-        log::info!("All Entries: {:?}", all_entries);
-
+        self.clients.lock().await.insert(self.id, (channel_id, handle, app));
         Ok(true)
     }
 
@@ -106,6 +109,14 @@ impl server::Handler for SshServer {
         log::info!(
             "PTY request: {}x{} ({}x{} pixels)", col_width, row_height, pix_width, pix_height
         );
+        session.channel_success(channel)?;
+        let mut clients = self.clients.lock().await;
+
+        if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
+            app.resize(col_width as u16, row_height as u16);
+            app.serve(None); // render pty size
+        }
+
         session.channel_success(channel)?;
         Ok(())
     }
@@ -137,26 +148,18 @@ impl server::Handler for SshServer {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        let type_reply = CryptoVec::from(format!("You typed: {:?}\r\n", String::from_utf8_lossy(data)));
-        let quit_reply = CryptoVec::from("Press 'q' to quit\r\n");
-        match data {
-            b"q" | b"\x03" | b"\x04" => {
-                session.data(channel, CryptoVec::from("Goodbye!\n"))?;
-                self.clients.lock().await.remove(&self.id);
+        let mut clients = self.clients.lock().await;
+        if let Some((_, _, app)) = clients.get_mut(&self.id) {
+            if app.handle_input(data) {
+                clients.remove(&self.id);
                 session.close(channel)?;
-            }
-            _ => {
-                // Echo back what they typed
-                // session.data(channel, type_reply)?;
-                // session.data(channel, quit_reply)?;
-                let mut clients = self.clients.lock().await;
-                let client = clients.get_mut(&self.id);
-                log::info!("{:?}", client);
+            } else {
+                app.serve(None);
             }
         }
         Ok(())
     }
-    }
+}
 
 impl Drop for SshServer {
     fn drop(&mut self) {

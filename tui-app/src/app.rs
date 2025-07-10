@@ -12,7 +12,7 @@ use crate::components::welcome::*;
 
 #[derive(Debug, Default)]
 pub struct App {
-    input_buffer: String,
+    pub input_buffer: String,
     running: bool,
     show_link: bool,
 }
@@ -31,7 +31,7 @@ impl App {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut Frame) {
+    pub fn render(&mut self, frame: &mut Frame) {
         let screen_area = frame.area();
 
         let background = Paragraph::new("")
@@ -85,7 +85,7 @@ impl App {
         Ok(())
     }
 
-    fn on_key_event(&mut self, key: KeyEvent) {
+    pub fn on_key_event(&mut self, key: KeyEvent) {
         if let KeyCode::Char(c) = key.code {
             self.input_buffer.push(c);
 

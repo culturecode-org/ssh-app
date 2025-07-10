@@ -1,8 +1,7 @@
 pub mod app;
 pub mod brand;
 pub mod components;
-
-use crate::app::App;
+pub use app::App;
 
 pub fn run() -> color_eyre::Result<()> {
     color_eyre::install()?;
