@@ -142,6 +142,27 @@ impl server::Handler for SshServer {
         Ok(())
     }
 
+    async fn window_change_request(
+        &mut self,
+        _: ChannelId,
+        col_width: u32,
+        row_height: u32,
+        _: u32,
+        _: u32,
+        _: &mut Session,
+    ) -> Result<(), Self::Error> {
+        log::info!("Window resized: {}x{}", col_width, row_height);
+
+        let mut clients = self.clients.lock().await;
+
+        if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
+            app.resize(col_width as u16, row_height as u16);
+            app.serve(None); // trigger re-render after resize
+        }
+
+        Ok(())
+    }
+
     async fn data(
         &mut self,
         channel: ChannelId,
