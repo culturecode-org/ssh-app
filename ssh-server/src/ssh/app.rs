@@ -70,7 +70,6 @@ impl App {
             AppMode::Mock => matches!(data, b"q" | b"\x03" | b"\x04"),
             AppMode::Tui => {
                 if let Some(tui_app) = &mut self.tui_app {
-                    // Convert SSH input to crossterm events
                     if let Some(key_event) = ssh_data_to_key_event(data) {
                         tui_app.on_key_event(key_event);
                         return tui_app.input_buffer == "200";

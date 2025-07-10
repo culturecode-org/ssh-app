@@ -170,12 +170,22 @@ impl server::Handler for SshServer {
         session: &mut Session,
     ) -> Result<(), Self::Error> {
         let mut clients = self.clients.lock().await;
-        if let Some((_, _, app)) = clients.get_mut(&self.id) {
-            if app.handle_input(data) {
+
+        if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
+            let should_exit = app.handle_input(data);
+
+            // Always serve updated UI after input
+            app.serve(None);
+
+            if should_exit {
+                // Send clear screen escape sequence
+                let clear: &[u8] = b"\x1b[2J\x1b[H\r\n";
+                session.data(channel, CryptoVec::from(clear))?;
+
+                // Shutdown logic here?
+
                 clients.remove(&self.id);
                 session.close(channel)?;
-            } else {
-                app.serve(None);
             }
         }
         Ok(())
