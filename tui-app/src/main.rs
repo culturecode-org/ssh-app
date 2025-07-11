@@ -1,6 +1,7 @@
 use color_eyre::Result;
 
-fn main() -> Result<()> {
-    tui_app::run()
+#[tokio::main]
+async fn main() -> Result<()> {
+    tui_app::run().await
 }
 

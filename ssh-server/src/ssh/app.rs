@@ -36,7 +36,7 @@ impl App {
     pub fn start_tui(terminal_handle: TerminalHandle) -> Self {
         let backend = CrosstermBackend::new(terminal_handle);
         let options = TerminalOptions {
-            viewport: Viewport::Fixed(Rect::default()),
+            viewport: Viewport::Fullscreen
         };
 
         let terminal = Terminal::with_options(backend, options).ok();
@@ -78,16 +78,11 @@ impl App {
                 tui_app.running = true;
 
                 while tui_app.running {
+                    // CRITICAL: Re-enable this
                     tui_app.poll_link_fetch();
 
                     if let Err(e) = terminal.draw(|f| tui_app.render(f)) {
                         log::error!("Draw failed: {}", e);
-                        break;
-                    }
-
-                    // Flush the terminal
-                    if let Err(e) = terminal.flush() {
-                        log::error!("Flush failed: {}", e);
                         break;
                     }
 

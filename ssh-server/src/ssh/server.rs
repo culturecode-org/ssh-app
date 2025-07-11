@@ -174,9 +174,6 @@ impl server::Handler for SshServer {
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
             let should_exit = app.handle_input(data);
 
-            // Always serve updated UI after input
-            app.serve(None);
-
             if should_exit {
                 // Send clear screen escape sequence
                 let clear: &[u8] = b"\x1b[2J\x1b[H\r\n";

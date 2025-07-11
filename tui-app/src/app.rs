@@ -39,7 +39,7 @@ impl App {
         Self::default()
     }
 
-    pub fn run<B: Backend>(mut self, mut terminal: Terminal<B>) -> Result<()> {
+    pub async fn run<B: Backend>(mut self, mut terminal: Terminal<B>) -> Result<()> {
         self.running = true;
 
         while self.running {
@@ -50,7 +50,7 @@ impl App {
             })?;
             self.handle_crossterm_events()?;
 
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
         Ok(())
     }
