@@ -85,7 +85,7 @@ impl server::Handler for SshServer {
         let app = if prot == Some("tui") {
             let terminal_handle = TerminalHandle::start(handle.clone(), channel_id).await;
             let mut app = App::start_tui(terminal_handle);
-            app.serve(None); // ?Initial Render
+            app.serve(None);
             app
         } else {
             App::start()
@@ -182,10 +182,10 @@ impl server::Handler for SshServer {
                 let clear: &[u8] = b"\x1b[2J\x1b[H\r\n";
                 session.data(channel, CryptoVec::from(clear))?;
 
-                // Shutdown logic here?
-
                 clients.remove(&self.id);
                 session.close(channel)?;
+                log::info!("Client close connection: {}", self.id);
+                log::info!("{:?}", self);
             }
         }
         Ok(())
