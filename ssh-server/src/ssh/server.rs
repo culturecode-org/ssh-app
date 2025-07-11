@@ -173,8 +173,6 @@ impl server::Handler for SshServer {
 
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
             let should_exit = app.handle_input(data);
-
-            // Always serve updated UI after input
             app.serve(None);
 
             if should_exit {
@@ -182,10 +180,10 @@ impl server::Handler for SshServer {
                 let clear: &[u8] = b"\x1b[2J\x1b[H\r\n";
                 session.data(channel, CryptoVec::from(clear))?;
 
-                // Shutdown logic here?
-
                 clients.remove(&self.id);
                 session.close(channel)?;
+                log::info!("Client close connection: {}", self.id);
+                log::info!("{:?}", self);
             }
         }
         Ok(())
