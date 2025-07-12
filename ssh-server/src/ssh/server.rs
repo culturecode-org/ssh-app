@@ -84,8 +84,6 @@ impl server::Handler for SshServer {
         log::info!("Channel open session: {:?}", prot);
         let app = if prot == Some("tui") {
             let terminal_handle = TerminalHandle::start(handle.clone(), channel_id).await;
-            //let mut app = App::start_tui(terminal_handle);
-            //app.serve(None); // ?Initial Render
             let app: SharedApp = Arc::new(Mutex::new(App::start_tui(terminal_handle)));
             app
         } else {
@@ -111,12 +109,12 @@ impl server::Handler for SshServer {
         log::info!(
             "PTY request: {}x{} ({}x{} pixels)", col_width, row_height, pix_width, pix_height
         );
-        session.channel_success(channel)?;
+        
         let mut clients = self.clients.lock().await;
-
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
-            app.resize(col_width as u16, row_height as u16);
-            app.serve(None); // render pty size
+            let mut app_guard = app.lock().await;
+            app_guard.resize(col_width as u16, row_height as u16);
+            app_guard.serve(None); // render pty size
         }
 
         session.channel_success(channel)?;
@@ -130,11 +128,12 @@ impl server::Handler for SshServer {
     ) -> Result<(), Self::Error> {
         let mut clients = self.clients.lock().await;
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
+            let mut app_guard = app.lock().await;
             // Route based on protocol
             let route = self.protocol.as_deref();
-            app.serve(route);
+            app_guard.serve(route);
 
-            session.data(channel, CryptoVec::from(app.content.clone()))?;
+            session.data(channel, CryptoVec::from(app_guard.content.clone()))?;
             session.channel_success(channel)?;
         } else {
             session.data(channel, CryptoVec::from("Session not found.\n"))?;
@@ -156,10 +155,10 @@ impl server::Handler for SshServer {
         log::info!("Window resized: {}x{}", col_width, row_height);
 
         let mut clients = self.clients.lock().await;
-
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
-            app.resize(col_width as u16, row_height as u16);
-            app.serve(None); // trigger re-render after resize
+            let mut app_guard = app.lock().await;
+            app_guard.resize(col_width as u16, row_height as u16);
+            app_guard.serve(None); // trigger re-render after resize
         }
 
         Ok(())
@@ -174,18 +173,19 @@ impl server::Handler for SshServer {
         let mut clients = self.clients.lock().await;
 
         if let Some((_chan_id, _handle, app)) = clients.get_mut(&self.id) {
-            let should_exit = app.handle_input(data);
-            app.serve(None);
+            let mut app_guard = app.lock().await;
+            let should_exit = app_guard.handle_input(data);
+            app_guard.serve(None);
 
             if should_exit {
                 // Send clear screen escape sequence
                 let clear: &[u8] = b"\x1b[2J\x1b[H\r\n";
                 session.data(channel, CryptoVec::from(clear))?;
 
+                drop(app_guard); // Release the lock before removing from HashMap
                 clients.remove(&self.id);
                 session.close(channel)?;
                 log::info!("Client close connection: {}", self.id);
-                log::info!("{:?}", self);
             }
         }
         Ok(())
