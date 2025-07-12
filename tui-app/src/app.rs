@@ -9,12 +9,28 @@ use ratatui::{
 use crate::brand;
 
 use crate::components::welcome::*;
+use crate::components::discord;
+
+#[derive(Debug)]
+enum LinkStatus {
+    None,
+    Fetching,
+    Success(String),
+    Error(String)
+}
+
+impl Default for LinkStatus {
+    fn default() -> LinkStatus {
+        LinkStatus::None
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct App {
     pub input_buffer: String,
     running: bool,
     show_link: bool,
+    link_status: LinkStatus
 }
 
 impl App {
@@ -63,7 +79,7 @@ impl App {
         let inner1 = block1.inner(content_layout[0]);
         frame.render_widget(block1, content_layout[0]);
 
-        let paragraph1 = welcome_paragraph(self.show_link);
+        let paragraph1 = self.get_welcome_paragraph();
         frame.render_widget(paragraph1, inner1);
 
         let block2 = Block::default();
@@ -74,6 +90,14 @@ impl App {
         frame.render_widget(paragraph2, inner2);
     }
 
+    fn get_welcome_paragraph(&self) -> Paragraph<'_> {
+        match &self.link_status {
+            LinkStatus::None => welcome_paragraph(self.show_link, None),
+            LinkStatus::Fetching => welcome_paragraph(self.show_link, Some("Fetching link...")),
+            LinkStatus::Success(link) => welcome_paragraph(self.show_link, Some(link)),
+            LinkStatus::Error(error) => welcome_paragraph(self.show_link, Some(error)),
+        }
+    }
 
     fn handle_crossterm_events(&mut self) -> Result<()> {
         match event::read()? {
@@ -103,5 +127,11 @@ impl App {
                 }
             }
         }
+    }
+
+    async fn start_link_fetch(&mut self) {
+        self.link_status = LinkStatus::Fetching;
+
+        let result = discord::get_invite_link().await;
     }
 }

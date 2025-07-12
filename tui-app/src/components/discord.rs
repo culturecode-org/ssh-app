@@ -67,8 +67,6 @@ pub async fn get_invite_link() -> Result<String, String> {
         }
     };
 
-    log::warn!("Using channel: {}", config.channel_id);
-
     match generate_invite(&client, &config.token, &config.channel_id).await {
         Ok(link) => {
             log::info!("Generated invite: {}", link);

@@ -9,11 +9,11 @@ use russh::{
 };
 
 use crate::ssh::{auth::AuthLog, terminal::TerminalHandle};
-use crate::ssh::app::App;
+use crate::ssh::app::{App, SharedApp};
 
 #[derive(Clone, Debug)]
 pub struct SshServer {
-    pub clients: Arc<Mutex<HashMap<usize, (ChannelId, Handle, App)>>>,
+    pub clients: Arc<Mutex<HashMap<usize, (ChannelId, Handle, SharedApp)>>>,
     pub id: usize,
     pub auth_log: Arc<AuthLog>,
     pub protocol: Option<String>
@@ -84,14 +84,16 @@ impl server::Handler for SshServer {
         log::info!("Channel open session: {:?}", prot);
         let app = if prot == Some("tui") {
             let terminal_handle = TerminalHandle::start(handle.clone(), channel_id).await;
-            let mut app = App::start_tui(terminal_handle);
-            app.serve(None); // ?Initial Render
+            //let mut app = App::start_tui(terminal_handle);
+            //app.serve(None); // ?Initial Render
+            let app: SharedApp = Arc::new(Mutex::new(App::start_tui(terminal_handle)));
             app
         } else {
-            App::start()
+            let app: SharedApp = Arc::new(Mutex::new(App::start()));
+            app
         };
 
-        self.clients.lock().await.insert(self.id, (channel_id, handle, app));
+        self.clients.lock().await.insert(self.id, (channel_id, handle, app.clone()));
         Ok(true)
     }
 

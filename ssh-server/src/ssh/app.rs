@@ -2,8 +2,12 @@ use tui_app::App as TuiApp;
 use ratatui::{backend::CrosstermBackend, Terminal, TerminalOptions, Viewport};
 use ratatui::layout::Rect;
 use super::terminal::TerminalHandle;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 type SshTerminal = Terminal<CrosstermBackend<TerminalHandle>>;
+
+pub type SharedApp = Arc<Mutex<App>>;
 
 #[derive(Debug)]
 pub struct App {
