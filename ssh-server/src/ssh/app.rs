@@ -65,6 +65,7 @@ impl App {
     
     fn serve_tui(&mut self) {
         if let (Some(terminal), Some(tui_app)) = (&mut self.terminal, &mut self.tui_app) {
+            tui_app.process_async_messages();
             let _ = terminal.draw(|frame| tui_app.render(frame));
         }
     }
